@@ -28,6 +28,7 @@ class EPCAPI:
     _library_host = 'library-service.live.use1a.on.epicgames.com'
     _store_gql_host = 'launcher.store.epicgames.com'
     _artifact_service_host = 'artifact-public-service-prod.beee.live.use1a.on.epicgames.com'
+    _marketplace_host = 'marketplace-website-node-launcher-prod.ol.epicgames.com'
 
     def __init__(self, lc='en', cc='US', timeout=10.0):
         self.log = logging.getLogger('EPCAPI')
@@ -182,6 +183,12 @@ class EPCAPI:
                              timeout=timeout or self.request_timeout)
         r.raise_for_status()
         return r.json().get(catalog_item_id, None)
+
+    def get_marketplace_product_info(self, product_id, product_type='item', timeout=None):
+        r = self.session.get(f'https://{self._marketplace_host}/ue/marketplace/api/assets/{product_type}/{product_id}',
+                             timeout=timeout or self.request_timeout)
+        r.raise_for_status()
+        return r.json()
 
     def get_artifact_service_ticket(self, sandbox_id: str, artifact_id: str, label='Live', platform='Windows'):
         # based on EOS windows service implementation, untested as it's not live yet (just 403s)

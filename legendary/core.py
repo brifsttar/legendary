@@ -380,6 +380,35 @@ class LegendaryCore:
             self.get_game_list(True, platform=platform)
         return self.lgd.get_game_meta(app_name)
 
+    def get_vault_list(self, force_refresh=False) -> List[Dict[str, str]]:
+        games, dlc_list = self.get_game_and_dlc_list(skip_ue=False, force_refresh=force_refresh)
+
+        products_ids = {g.catalog_item_id for g in games if g.namespace == 'ue'}
+        vault = []
+
+        def fetch_product_data(product_id):
+            try:
+                mp_item = self.egs.get_marketplace_product_info(product_id, product_type='item', timeout=10.0)
+                try:
+                    mp_item = mp_item['data']['data']
+                    mp_asset = self.egs.get_marketplace_product_info(mp_item['id'], product_type='asset', timeout=10.0)
+                    mp_asset = mp_asset['data']['data']
+                    vault_asset = {
+                        'title': mp_asset['title'],
+                        'url': f"www.unrealengine.com/marketplace/en-US/product/{mp_asset['urlSlug']}",
+                    }
+                    vault.append(vault_asset)
+                except KeyError:
+                    pass
+            except HTTPError:
+                pass
+
+        self.log.info(f'Fetching Marketplace data for {len(products_ids)} product(s).')
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            executor.map(fetch_product_data, products_ids)
+
+        return vault
+
     def get_game_list(self, update_assets=True, platform='Windows') -> List[Game]:
         return self.get_game_and_dlc_list(update_assets=update_assets, platform=platform)[0]
 

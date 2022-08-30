@@ -264,6 +264,24 @@ class LegendaryCLI:
 
         print(f'\nTotal: {len(games)}')
 
+    def list_vault(self, args):
+        logger.info('Logging in...')
+        if not self.core.login():
+            logger.error('Login failed, cannot continue!')
+            exit(1)
+
+        if args.force_refresh:
+            logger.info('Refreshing game list, this may take a while...')
+        else:
+            logger.info('Getting game list... (this may take a while)')
+
+        products = self.core.get_vault_list(force_refresh=args.force_refresh)
+
+        writer = csv.writer(stdout, dialect='excel', lineterminator='\n')
+        writer.writerow(['Title', 'Url'])
+        for product in products:
+            writer.writerow((product['title'], product['url']))
+
     def list_installed(self, args):
         if args.check_updates:
             logger.info('Logging in to check for updates...')
@@ -2571,6 +2589,7 @@ def main():
     list_files_parser = subparsers.add_parser('list-files', help='List files in manifest')
     list_installed_parser = subparsers.add_parser('list-installed', help='List installed games')
     list_saves_parser = subparsers.add_parser('list-saves', help='List available cloud saves')
+    list_vault_parser = subparsers.add_parser('list-vault', help='List available Marketplace Vault products')
     move_parser = subparsers.add_parser('move', help='Move specified app name to a new location')
     status_parser = subparsers.add_parser('status', help='Show legendary status information')
     sync_saves_parser = subparsers.add_parser('sync-saves', help='Sync cloud saves')
@@ -2764,6 +2783,9 @@ def main():
     list_parser.add_argument('--json', dest='json', action='store_true', help='List games in JSON format')
     list_parser.add_argument('--force-refresh', dest='force_refresh', action='store_true',
                              help='Force a refresh of all game metadata')
+
+    list_vault_parser.add_argument('--force-refresh', dest='force_refresh', action='store_true',
+                                   help='Force a refresh of all game metadata')
 
     list_installed_parser.add_argument('--check-updates', dest='check_updates', action='store_true',
                                        help='Check for updates for installed games')
@@ -2972,6 +2994,8 @@ def main():
             cli.list_files(args)
         elif args.subparser_name == 'list-saves':
             cli.list_saves(args)
+        elif args.subparser_name == 'list-vault':
+            cli.list_vault(args)
         elif args.subparser_name == 'download-saves':
             cli.download_saves(args)
         elif args.subparser_name == 'sync-saves':
