@@ -1,6 +1,8 @@
 # !/usr/bin/env python
 # coding: utf-8
 
+import urllib.parse
+
 import requests
 import requests.adapters
 import logging
@@ -13,7 +15,8 @@ from legendary.models.gql import *
 
 class EPCAPI:
     _user_agent = 'UELauncher/11.0.1-14907503+++Portal+Release-Live Windows/10.0.19041.1.256.64bit'
-    _store_user_agent = 'EpicGamesLauncher/11.0.1-14907503+++Portal+Release-Live'
+    # ToDo figure out why updating this past 14.0.8 causes a CF captcha page :/
+    _store_user_agent = 'EpicGamesLauncher/14.0.8-22004686+++Portal+Release-Live'
     # required for the oauth request
     _user_basic = '34a02cf8f4414e29b15921876da36f9a'
     _pw_basic = 'daafbccc737745039dffe53d94fc76cf'
@@ -54,11 +57,16 @@ class EPCAPI:
         else:
             self.request_timeout = None
 
+    def get_auth_url(self):
+        login_url = 'https://www.epicgames.com/id/login?redirectUrl='
+        redirect_url = f'https://www.epicgames.com/id/api/redirect?clientId={self._user_basic}&responseType=code'
+        return login_url + urllib.parse.quote(redirect_url)
+
     def update_egs_params(self, egs_params):
         # update user-agent
         if version := egs_params['version']:
             self._user_agent = f'UELauncher/{version} Windows/10.0.19041.1.256.64bit'
-            self._store_user_agent = f'EpicGamesLauncher/{version}'
+            # self._store_user_agent = f'EpicGamesLauncher/{version}'
             self.session.headers['User-Agent'] = self._user_agent
             self.unauth_session.headers['User-Agent'] = self._user_agent
         # update label
@@ -88,7 +96,7 @@ class EPCAPI:
         return self.user
 
     def start_session(self, refresh_token: str = None, exchange_token: str = None,
-                      client_credentials: bool = False) -> dict:
+                      authorization_code: str = None, client_credentials: bool = False) -> dict:
         if refresh_token:
             params = dict(grant_type='refresh_token',
                           refresh_token=refresh_token,
@@ -96,6 +104,10 @@ class EPCAPI:
         elif exchange_token:
             params = dict(grant_type='exchange_code',
                           exchange_code=exchange_token,
+                          token_type='eg1')
+        elif authorization_code:
+            params = dict(grant_type='authorization_code',
+                          code=authorization_code,
                           token_type='eg1')
         elif client_credentials:
             params = dict(grant_type='client_credentials',
